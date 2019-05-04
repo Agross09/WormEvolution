@@ -118,20 +118,19 @@ def setup_lab_QSS_weighted_sum(p):
 # - It uses Alexis' parameters and chemicals.
 # - We can switch it between having ion channels in the head/tail only, or in
 #   the entire body.
-def setup_lab_worm(p):
+def setup_lab_worm(params, worm):
     # Parameters:
     # N and kM are for the Hill model, where [M] controls the K channels.
     # 'scale' controls how strong the gap junctions are
-    kM=1; N=10; scale=.1	# Lab sim #1
-    ...				# Lab sim #2
-    ...				# Lab sim #3
+    kM=worm.Km; N=worm.N; scale=worm.GJ_scale	# Lab sim #1
 
-    num_cells=5
-    p.sim_dump_interval = 500	# Not much debug printout during the sim
+    # eplt.set_network_shape([10,1])
+    num_cells=worm.num_cells
+    params.sim_dump_interval = 500	# Not much debug printout during the sim
 
     n_GJs = num_cells-1
 
-    sim.init_big_arrays (num_cells, n_GJs, p, ['M'])
+    sim.init_big_arrays (num_cells, n_GJs, params, ['M'])
     Na=sim.ion_i['Na']; K=sim.ion_i['K']; Cl=sim.ion_i['Cl']
     P=sim.ion_i['P']; M=sim.ion_i['M']
 
@@ -174,7 +173,7 @@ def setup_lab_worm(p):
     # Ion-channel diffusion coef: Na=K=M = 1e-18 m2/s, and P=0. Already done.
 
     # Change the gap-junction length from 100nm to 15nm.
-    p.gj_len = 15e-9
+    params.gj_len = 15e-9
 
     # GJ scaled diff: Na=1.33e-17 m2/s, K=1.96e-17, M=1e-14, P=5e-17
     sim.GJ_diffusion[Na]=1.33e-17; sim.GJ_diffusion[K]=1.96e-17
@@ -187,9 +186,9 @@ def setup_lab_worm(p):
     print ('Head magic={}'.format (sim.ion_magic[K,0]))
     print ('Tail magic={}'.format (sim.ion_magic[K,-1]))
 
-def setup_and_sim ():
+def setup_and_sim (worm, time_to_run):
     import sys
-
+    """
     # If no command-line arguments are given, prompt for them.
     if (len (sys.argv) <= 1):
         args = 'main.py ' + input('Arguments: ')
@@ -201,17 +200,18 @@ def setup_and_sim ():
 
     if (len(sys.argv) != 3):
        raise SyntaxError('Usage: python3 main.py test-name-to-run sim-end-time')
-
-    end_time = float (sys.argv[2])
+    """
+    end_time = float(time_to_run)
 
     # Run whatever test got chosen on the command line.
     GP = sim.Params()
+    setup_lab_worm(GP, worm)
     eval ('setup_'+sys.argv[1]+'(GP)')
 
-    if (regress_mode):	# Works even if setup_...() overrules these params!
-        GP.adaptive_timestep = False	# Force regression
-        GP.sim_dump_interval = 1
-        GP.sim_long_dump_interval = 10
+    #if (regress_mode):	# Works even if setup_...() overrules these params!
+    #    GP.adaptive_timestep = False	# Force regression
+    #    GP.sim_dump_interval = 1
+    #    GP.sim_long_dump_interval = 10
 
     # Initialize Vmem -- typically 0, or close to that.
     Vm = sim.compute_Vm (sim.cc_cells, GP)
@@ -250,5 +250,3 @@ def setup_and_sim ():
     eplt.plot_Vmem_graph(t_shots,[s[K]  for s in cc_shots],np.arange(n_cells),'[K] (mol/m3')
     eplt.plot_Vmem_graph(t_shots,[s[Cl]  for s in cc_shots],np.arange(n_cells),'[Cl] (mol/m3')
     #eplt.plot_Vmem_graph(t_shots,[s[M] for s in cc_shots],np.arange(n_cells),'[M] (mol/m3')
-
-setup_and_sim()

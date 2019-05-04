@@ -27,6 +27,16 @@ class Worm:
         self.G_cl = random.randint(trait_bounds[13], trait_bounds[14])
         self.GJ_diff_m = random.randint(trait_bounds[15], trait_bounds[16])
 
+        #working set of parameters
+        # self.Km = random.randint(1,1)
+        # self.N = random.randint(10,10)
+        # self.GJ_scale = random.randint(1, 1)
+        # self.num_cells = random.randint(5,5)
+        # self.G_k = random.randint(trait_bounds[9], trait_bounds[10])
+        # self.G_na = random.randint(trait_bounds[11], trait_bounds[12])
+        # self.G_cl = random.randint(trait_bounds[13], trait_bounds[14])
+        # self.GJ_diff_m = 1e-14
+
 def gen_worms(trait_file):
     trait_bounds = get_traits(trait_file)
     trait_bounds = [int(i) for i in trait_bounds]
@@ -40,7 +50,7 @@ def gen_worms(trait_file):
         population.add(worm)
         i = i + 1
 
-    print_pop(population, num_worms)
+    #print_pop(population, num_worms)
     
     return population
 
@@ -65,9 +75,9 @@ def get_traits(trait_file):
 def print_pop(population, num_worms):
     i = 0
     print("\n")
-
+    print_pop = population.copy()
     while(i < num_worms):
-        to_print = population.pop()
+        to_print = print_pop.pop()
         print("Worm #" + str(i))
         print("Km = " + str(to_print.Km))
         print("N = " + str(to_print.N))
