@@ -28,7 +28,6 @@ class Worm:
         self.GJ_diff_m = random.randint(trait_bounds[15], trait_bounds[16])
 
 def gen_worms(trait_file):
-    print("adsfhg")
     trait_bounds = get_traits(trait_file)
     trait_bounds = [int(i) for i in trait_bounds]
     num_worms = trait_bounds[0]
@@ -43,7 +42,7 @@ def gen_worms(trait_file):
 
     print_pop(population, num_worms)
     
-    return
+    return population
 
 def get_traits(trait_file):
     i = 1
