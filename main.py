@@ -104,12 +104,12 @@ def setup_lab_QSS_weighted_sum(p):
     sim.Dm_array[:,3]= 0	# No ion channels of its own, so it senses well
 
     # Cell 4 = mix (0, 2) using GJ #2, #3.
-    sim.gj_connects[2] = (0, 4, 5*GJ_scale)
+    sim.gj_connects[2] = (0, 4, 1*GJ_scale)
     sim.gj_connects[3] = (2, 4, 1*GJ_scale)
     sim.Dm_array[:,4]= 0	# No ion channels of its own, so it senses well
 
     # Cell 5 = mix (0, 1, 2) using GJ #4, #5 and #6
-    sim.gj_connects[4] = (0, 5, 7*GJ_scale)
+    sim.gj_connects[4] = (0, 5, 1*GJ_scale)
     sim.gj_connects[5] = (1, 5, 1*GJ_scale)
     sim.gj_connects[6] = (2, 5, 1*GJ_scale)
     sim.Dm_array[:,5]= 0	# No ion channels of its own, so it senses well
@@ -122,11 +122,10 @@ def setup_lab_worm(p):
     # Parameters:
     # N and kM are for the Hill model, where [M] controls the K channels.
     # 'scale' controls how strong the gap junctions are
-    kM=1; N=10; scale=1	# Lab sim #1
+    kM=1; N=10; scale=.1	# Lab sim #1
     ...				# Lab sim #2
     ...				# Lab sim #3
 
-    eplt.set_network_shape ([1, 5]) # For future pretty plotting.
     num_cells=5
     p.sim_dump_interval = 500	# Not much debug printout during the sim
 
@@ -231,7 +230,7 @@ def setup_and_sim ():
     # pretty_plot() can make a nice picture of the interconnections and each
     # cell's Vm.
     Vm = sim.compute_Vm (sim.cc_cells, GP)
-    eplt.pretty_plot (Vm*1e3)
+    #eplt.pretty_plot (Vm*1e3)
 
     # We often want a printed dump of the final simulation results.
     np.set_printoptions (formatter={'float': '{:.6g}'.format}, linewidth=90)
@@ -243,7 +242,7 @@ def setup_and_sim ():
     # as desired.
     # quit()
     Na = sim.ion_i['Na']; K = sim.ion_i['K']; Cl=sim.ion_i['Cl']
-    P=sim.ion_i['P']; M=sim.ion_i['M']
+    # P=sim.ion_i['P']; M=sim.ion_i['M']
     Vm_shots = [sim.compute_Vm (c,GP)*1000 for c in cc_shots]
     n_cells = sim.cc_cells.shape[1]
     eplt.plot_Vmem_graph(t_shots,Vm_shots, np.arange(n_cells),'Vmem(mV)')
