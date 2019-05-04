@@ -5,6 +5,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 import sim
+#import pdb; pdb.set_trace()
+
+# Simple functions to plot voltage or ion concentration.
+#	'cells' is which cells to plot (if not given, then plot all cells).
+#	'ion' is a string: e.g., 'Na'.
+#   def plot_Vmem (t_shots, cc_shots, cells=None)
+#   def plot_ion (ion, t_shots, cc_shots, cells=None)
 
 # Graphs Vmem vs time. 'Which_cells' says which cells to graph.
 # Really, it isn't limited to Vmem; it can do any piece of data that's
@@ -44,6 +51,18 @@ def plot_Vmem_graph (t_shots, data_shots, which_cells, ylabel, filename=None):
         plt.show()
     else:
         plt.savefig(filename)
+
+def plot_Vmem (t_shots, cc_shots, cells=None):
+    Vm_shots = [sim.compute_Vm (c,sim.GP)*1000 for c in cc_shots]
+    n_cells = cc_shots[0].shape[1]
+    cells = (np.arange(n_cells) if cells==None else np.array((cells)))
+    plot_Vmem_graph(t_shots,Vm_shots, cells,'Vmem(mV)')
+
+def plot_ion (ion, t_shots, cc_shots, cells=None):
+    n_cells = cc_shots[0].shape[1]
+    cells = (np.arange(n_cells) if cells==None else np.array((cells)))
+    idx = sim.ion_i[ion]
+    plot_Vmem_graph(t_shots,[s[idx] for s in cc_shots],cells,'['+ion+'] (mol/m3')
 
 ######################################################
 # Pretty plotting.
@@ -128,3 +147,13 @@ def pretty_plot (data):
     plt.axis('equal')	# ensure that circles are circular and not ellipses.
     plt.axis('off')
     plt.show()
+
+def print_data (t_shots, data_shots, which_cells, ylabel, filename=None):
+    import sys
+    fp = sys.stdout if (filename is None) else open (filename, "w")
+
+    for i in range(len(t_shots)):
+        data = (data_shots[i])[which_cells]
+        data2 = [ '{:.3g}'.format(d) for d in data ]
+        st = ",".join(data2)
+        print ('t={:.3f}: {}=[{}]'.format (t_shots[i], ylabel, st), file=fp)

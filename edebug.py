@@ -1,13 +1,13 @@
 # Copyright 2018 Alexis Pietak and Joel Grodstein
 # See "LICENSE" for further details.
-
+    #import pdb; pdb.set_trace()
 '''
 Various functions to help with debug
 
 dump(t, cc_cells, units, long):
     The main function for debug dumping. In short mode ('long'=False), it
     just prints the time, cc_cells and Vm. In long mode, it prints a host more
-    information.
+    information. 'Units' can be either mV_per_s, mol_per_m2s, or mol_per_m3s.
 
 analyze_equiv_network (GP):
     The first set of analyses is per cell, and disregards GJs.
@@ -41,6 +41,7 @@ analyze_equiv_network (GP):
 
 dump_magic ():
     Prints out the values of the "magic" gating for all ion channels and GJs.
+    sim.cc_cells *must* already be set up.
 
 There are also few utility routines:
 
@@ -77,6 +78,7 @@ def dump (t, cc_cells, units, long):
     print ('\nt={}: dumping {}-format...'.format(t,'long' if long else 'short'))
 
     # Print cc_cells[].
+    sim.cc_cells = cc_cells
     np.set_printoptions (formatter={'float': '{:4.0f}'.format})
     print ('cc_cells=')
     for ion_name,idx in sorted (sim.ion_i.items(),key=operator.itemgetter(1)):
@@ -89,10 +91,11 @@ def dump (t, cc_cells, units, long):
     if (not long):
         return
 
-    (pump_Na, pump_K, GHK_fluxes, GJ_diff, GJ_drif) \
+    (pump_Na, pump_K, GHK_fluxes, GJ_diff, GJ_drif, gen, decay) \
       =sim_slopes_debug (cc_cells,sim.cc_env,sim.Dm_array,sim.z_array, \
                                   sim.ion_i,sim.gj_connects,sim.GP)
-    (scl,tag) = scale ([pump_Na,pump_K,GHK_fluxes,GJ_diff,GJ_drif],units,sim.GP)
+    (scl,tag) = scale ([pump_Na,pump_K,GHK_fluxes,GJ_diff,GJ_drif,gen,decay],
+                       units,sim.GP)
 
     # Get the GJ contributions to the flux in each cell.
     GJ_diff_by_cell = np.zeros (cc_cells.shape)
@@ -119,6 +122,8 @@ def dump (t, cc_cells, units, long):
     GJ_drif = np.round(GJ_drif*scl)
     GJ_diff_by_cell = np.round(GJ_diff_by_cell*scl)
     GJ_drif_by_cell = np.round(GJ_drif_by_cell*scl)
+    gen = np.round(gen*scl)
+    decay = np.round(decay*scl)
     ion_totals   = np.round (ion_totals*scl)
     grand_totals = np.round (grand_totals*scl)
 
@@ -155,6 +160,15 @@ def dump (t, cc_cells, units, long):
             print ('{:2s} GJ diff: {} {}'.format(ion_name,GJ_diff[ion_idx],tag))
         if ((GJ_drif[ion_idx,:]!=0).any()):
             print ('{:2s} GJ drif: {} {}'.format(ion_name,GJ_drif[ion_idx],tag))
+
+    # Generation and decay
+    if ((gen!=0).any() or (decay!=0).any()):
+        print ('\nnow generation and decay:')
+    for ion_name,ion_idx in sorted(sim.ion_i.items(),key=operator.itemgetter(1)):
+        if ((gen[ion_idx,:]!=0).any()):
+            print ('{:2s} generation: {} {}'.format(ion_name,gen[ion_idx],tag))
+        if ((decay[ion_idx,:]!=0).any()):
+            print ('{:2s} decay: {} {}'.format(ion_name,decay[ion_idx],tag))
 
 def dump_magic ():
     print ('Magic summary:')
@@ -217,14 +231,14 @@ def analyze_equiv_network (GP):
     # We have (Vmem-Vthev_net)*Gthev_net + pump_Na + pump_K = 0, or
     # Vmem*Gthev_net - Vthev_net*Gthev_net + pump_Na + pump_K = 0, or
     # Vmem = (Vthev_net*Gthev_net + pump_Na + pump_K) / Gthev_net
-    (pump_Na, pump_K, GHK_fluxes, GJ_diff, GJ_drif) \
+    (pump_Na, pump_K, GHK_fluxes, GJ_diff, GJ_drif, gen, decay) \
       =sim_slopes_debug (sim.cc_cells,sim.cc_env,sim.Dm_array,sim.z_array, \
                                   sim.ion_i,sim.gj_connects,sim.GP)
     Vmem = (Vthev_net*Gthev_net + pump_Na + pump_K) / Gthev_net
     print ('Open-circuit Vmem including pumps = ', Vmem)
 
     # Next, equivalents for GJs (if there are any).
-    (GJ_Ith, GJ_Gth) = sim.GJ_norton(GP)
+    (GJ_Ith, GJ_Gth) = sim.GJ_norton (GP)
     if (GJ_Gth.size == 0):
         return
 
@@ -250,44 +264,62 @@ def analyze_equiv_network (GP):
 # - returns all of the individual data that we can coalesce however we like
 # - returns it all in units of moles/(m2*s)
 # - the GJ data is all mass fluxes in the from->to direction.
-def sim_slopes_debug (cc_cells,cc_env,Dm_array,z_array,ion_i,gj_connects,GP):
-    Vm = sim.compute_Vm (cc_cells, GP)
+def sim_slopes_debug (Cc_cells,cc_env,Dm_array,z_array,ion_i,gj_connects,GP):
+    sim.cc_cells = Cc_cells
+    Vm = sim.compute_Vm (Cc_cells, GP)
+
+    # General note: our units of flux are moles/(m2*s). The question: m2 of
+    # what area? You might think that for, e.g., ion channels, it should be per
+    # m2 of ion-channel area -- but it's not. All fluxes are per m2 of cell-
+    # membrane area. Thus, the (e.g.,) diffusion rate through ion channels must
+    # be scaled down by the fraction of membrane area occupied by channels.
+    # The same goes for ion pumps and GJs.
 
     # Run the Na/K-ATPase ion pump in each cell.
     # Returns two 1D arrays[N_CELLS] of fluxes; units are moles/(m2*s)
-    pump_Na, pump_K, _ = stb.pumpNaKATP(cc_cells[ion_i['Na']],
-                                  cc_env[ion_i['Na']],
-                                  cc_cells[ion_i['K']],
-                                  cc_env[ion_i['K']],
-                                  Vm, GP.T, GP, 1.0)
+    pump_Na,pump_K,_ = stb.pumpNaKATP(Cc_cells[ion_i['Na']],cc_env[ion_i['Na']],
+                                      Cc_cells[ion_i['K']], cc_env[ion_i['K']],
+                                      Vm, GP.T, GP, 1.0)
 
     # Kill the pumps on worm-interior cells (based on Dm=0 for all ions)
-    keep_pumps = np.any (Dm_array>0, 0)
+    keep_pumps = np.any (Dm_array>0, 0)	# array[n_cells]
     pump_Na *= keep_pumps
     pump_K  *= keep_pumps
 
     # for each ion: (sorted to be in order 0,1,2,... rather than random)
-    GHK_fluxes = np.empty (cc_cells.shape)
+    GHK_fluxes = np.empty (Cc_cells.shape)
     for ion_name,ion_index in sorted (ion_i.items(),key=operator.itemgetter(1)):
         # GHK flux across membranes into the cell
         # It returns array[N_CELLS] of moles/(m2*s)
-        GHK_fluxes[ion_index] = sim.GHK (cc_cells, ion_index, Vm) \
-                              * sim.eval_magic (sim.ion_magic[ion_index,:])
+        f_ED = sim.GHK (ion_index, Vm)
+        f_ED *= sim.eval_magic (sim.ion_magic[ion_index,:])
+        GHK_fluxes[ion_index] = f_ED
 
-    # Get the gap-junction Thevenin-equivalent circuits for all ions at once.
-    # Units of Ith are mol/(m2*s); units of Gth are mol/(m2*s) per Volt.
-    (GJ_Ith, GJ_Gth) = sim.GJ_norton(GP) # [n_ions,n_GJs].
-
+    # Gap-junction computations.
     deltaV_GJ = (Vm[gj_connects['to']] - Vm[gj_connects['from']]) # [n_GJs]
 
+    # Get the gap-junction Norton-equivalent circuits for all ions at once.
+    # Units of Ith are mol/(m2*s); units of Gth are mol/(m2*s) per Volt.
+    (GJ_Ith, GJ_Gth) = sim.GJ_norton(GP)	# Both are [n_ions,n_GJs].
+
+    # As opposed so sim.slew_cc(), our callers just want GJ diffusion and
+    # drift.
     # [n_ions,n_GJs] * [n_GJs]
     GJ_diff = GJ_Ith.copy() * sim.eval_magic (sim.GJ_magic)
     # [n_ions,n_GJs] * [n_GJs] * [n_GJs]
     GJ_drif = GJ_Gth * sim.eval_magic (sim.GJ_magic) * deltaV_GJ
 
+    # Next, do generation and decay.
+    gen   = sim.gen_cells.copy()	# [n_ions, n_cells]
+    decay = Cc_cells.copy()		# [n_ions, n_cells]
+    for ion_name,ion_index in sorted (ion_i.items(),key=operator.itemgetter(1)):
+        gen[ion_index] = sim.gen_cells[ion_index,:] \
+                         * sim.eval_magic(sim.gen_magic[ion_index,:])
+        decay[ion_index,:] *= sim.decay_rates[ion_index]
+
     # All returned values are in moles/(m2*s), where the m2 is m2 of
     # cell-membrane area.
-    return (pump_Na, pump_K, GHK_fluxes, GJ_diff, GJ_drif)
+    return (pump_Na, pump_K, GHK_fluxes, GJ_diff, GJ_drif, gen, decay)
 
 from enum import Enum
 class Units(Enum):
@@ -350,7 +382,7 @@ def GHK_debug (V, ion_name, cell, p):
     ion_index = sim.ion_i[ion_name]
     num_cells = sim.cc_cells.shape[1]
     Vm = np.zeros(num_cells); Vm[cell]=V
-    f = sim.GHK (sim.cc_cells, ion_index, Vm)
+    f = sim.GHK (ion_index, Vm)
     #print ('V={}mV => {} flux={}'.format(V*1000, ion_name, f[cell]))
     return (f[cell])
 

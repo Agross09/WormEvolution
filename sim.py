@@ -80,8 +80,8 @@ The 'magic' system for gating
    If 'type' is 2 or 3, we use ligand-based gating: take ligand 'ion' from
      cell #'cell', and then use the usual Hill inverter model:
 	scale = 1 / (1 + ([ion]/kM)^N).
-     Types 2 and 3 are both a ligand-based Hill model; type 2 follows the Hill
-     inverter model with "scale=1-scale" to make a buffer.
+     Types 2 and 3 are both a ligand-based Hill-inverter model; type 2 follows
+     the Hill inverter model with "scale=1-scale" to make a buffer.
      'Cell2' is unused for both type=2 and type=3.
 
 Generation and decay
@@ -94,11 +94,12 @@ Generation and decay
     gen_cells[N_IONS,N_CELLS] (units of moles/(m3*s)) and gen_magic[same size]
 	give generation parameters. For any ion i in cell c, the generation rate
 	(moles/(m3*s)) is d[ion]/dt=gen_cells[i,c] * eval_magic(gen_magic[i,c])
-    decay_cells[N_IONS]	gives the decay rate for each ion in units of 1/s.
+    decay_rates[N_IONS]	gives the decay rate for each ion in units of 1/s.
 	In any cell, we then have d[ion]/dt = [ion] * decay_rate, with resulting
 	units of moles/(m3*s)
 '''
 import numpy as np
+import scipy
 import math	# To get pi.
 import sim_toolbox as stb
 import operator
@@ -134,6 +135,7 @@ class Params(object):
         # Simulation control.
         self.sim_dump_interval=10
         self.sim_long_dump_interval=100
+        self.no_dumps = False
 
         # Numerical-integration parameters. These place a limit on how much
         # any cell's Vmem, or any ion concentration, can change in one timestep.
@@ -141,6 +143,7 @@ class Params(object):
         # .001 means that no [ion] can change by more than .1% in one timestep.
         self.sim_integ_max_delt_cc = .001
         self.adaptive_timestep = True	# So that the params above get used.
+        self.use_implicit = False	# Use the implicit integrator
 
         ###JJJ My new neutral ion "A"
         self.concA_fixed_amount = 100	# moles/m3
@@ -148,7 +151,7 @@ class Params(object):
 def init_big_arrays (n_cells, n_GJs, p, extra_ions=[]):
     global cc_cells, cc_env, Dm_array, z_array, ion_i,Vm, \
            GJ_diffusion, ion_magic, GJ_magic, gj_connects, GP, \
-           gen_cells, gen_magic, decay_cells
+           gen_cells, gen_magic, decay_rates
     GP = p
 
     # ion properties (Name, base membrane diffusion [m2/s], valence
@@ -199,7 +202,7 @@ def init_big_arrays (n_cells, n_GJs, p, extra_ions=[]):
     # Create default arrays for GJs, and for generation, decay rates.
     gj_connects=np.zeros((n_GJs), dtype=[('from','i4'),('to','i4'),('scale','f4')])
     gen_cells   = np.zeros ((n_ions, n_cells))
-    decay_cells = np.zeros ((n_ions))
+    decay_rates = np.zeros ((n_ions))
 
 # Register a function to be called after every simulation step.
 post_hook_func=None
@@ -215,10 +218,10 @@ def register_post_hook (func):
 # not needed outside of sim.py. However, the solve() functions in main.py call
 # sim_slopes() directly -- sim_slopes() == vector of zeroes indicates steady
 # state.
-def sim_slopes (t, cc_cells):
+def sim_slopes (t, Cc_cells):
     global cc_env, Dm_array, z_array, ion_i, Vm, gj_connects, GP, \
-           gen_cells, gen_magic, decay_cells
-    num_cells = cc_cells.shape[1]
+           gen_cells, gen_magic, decay_rates, cc_cells
+    cc_cells = Cc_cells
     Vm = compute_Vm (cc_cells, GP)
 
     # General note: our units of flux are moles/(m2*s). The question: m2 of
@@ -231,52 +234,46 @@ def sim_slopes (t, cc_cells):
 
     # Run the Na/K-ATPase ion pump in each cell.
     # Returns two 1D arrays[N_CELLS] of fluxes; units are moles/(m2*s)
-    f_Na, f_K, _ = stb.pumpNaKATP(cc_cells[ion_i['Na']],
-                                  cc_env[ion_i['Na']],
-                                  cc_cells[ion_i['K']],
-                                  cc_env[ion_i['K']],
-                                  Vm,
-                                  GP.T,
-                                  GP,
-                                  1.0)
+    pump_Na,pump_K,_ = stb.pumpNaKATP(cc_cells[ion_i['Na']],cc_env[ion_i['Na']],
+                                      cc_cells[ion_i['K']], cc_env[ion_i['K']],
+                                      Vm, GP.T, GP, 1.0)
 
     # Kill the pumps on worm-interior cells (based on Dm=0 for all ions)
     keep_pumps = np.any (Dm_array>0, 0)	# array[n_cells]
-    f_Na *= keep_pumps
-    f_K  *= keep_pumps
+    pump_Na *= keep_pumps
+    pump_K  *= keep_pumps
 
     # Update the cell-interior [Na] and [K] after pumping (assume env is too big
     # to change its concentration).
-    slew_cc[ion_i['Na']] = f_Na
-    slew_cc[ion_i['K']]  = f_K
-
-    # Get the gap-junction Thevenin-equivalent circuits for all ions at once.
-    # We get two arrays of [n_ions,n_GJs].
-    # Units of Ith are mol/(m2*s); units of Gth are mol/(m2*s) per Volt.
-    (GJ_Ith, GJ_Gth) = GJ_norton(GP)
+    slew_cc[ion_i['Na']] = pump_Na
+    slew_cc[ion_i['K']]  = pump_K
 
     # for each ion: (sorted to be in order 0,1,2,... rather than random)
     for ion_name,ion_index in sorted (ion_i.items(),key=operator.itemgetter(1)):
         # GHK flux across membranes into the cell
         # It returns array[N_CELLS] of moles/(m2*s)
-        f_ED = GHK (cc_cells, ion_index, Vm)
+        f_ED = GHK (ion_index, Vm)
         f_ED *= eval_magic (ion_magic[ion_index,:])
-
         slew_cc[ion_index] += f_ED
 
-        # Gap-junction computations. Note the units of the Thevenin-equivalent
-        # circuits; the "Ithev" is actually moles/(m2*s), just like f_gj.
-        # These arrays are all [n_GJ].
-        deltaV_GJ = (Vm[gj_connects['to']] - Vm[gj_connects['from']])
-        f_gj = GJ_Ith[ion_index] + deltaV_GJ*GJ_Gth[ion_index]
-        f_gj *= eval_magic (GJ_magic)
+    # Gap-junction computations.
+    deltaV_GJ = (Vm[gj_connects['to']] - Vm[gj_connects['from']]) # [n_GJs]
 
-        # Update cells with gj flux:
-        # Note that the simple slew_cc[ion_index, gj_connects['to']] += f_gj
-        # doesn't actually work in the case of two GJs driving the same 'to'
+    # Get the gap-junction Norton-equivalent circuits for all ions at once.
+    # Units of Ith are mol/(m2*s); units of Gth are mol/(m2*s) per Volt.
+    (GJ_Ith, GJ_Gth) = GJ_norton(GP)	# Both are [n_ions,n_GJs].
+    f_gj = GJ_Ith + deltaV_GJ*GJ_Gth	# [n_ions,n_GJs]
+
+    magic = eval_magic (GJ_magic)		# [n_GJs]
+    f_gj *= magic				# [n_ions,n_GJs]
+
+    # Update cells with GJ flux:
+    # Note that the simple slew_cc[ion_index, gj_connects['to']] += f_gj
+    # doesn't actually work in the case of two GJs driving the same 'to'
+    for ion_name,ion_index in sorted (ion_i.items(),key=operator.itemgetter(1)):
         # cell. Instead, we use np.add.at().
-        np.add.at (slew_cc[ion_index,:], gj_connects['from'], -f_gj)
-        np.add.at (slew_cc[ion_index,:], gj_connects['to'],    f_gj)
+        np.add.at (slew_cc[ion_index,:], gj_connects['from'], -f_gj[ion_index])
+        np.add.at (slew_cc[ion_index,:], gj_connects['to'],    f_gj[ion_index])
 
     # The current slew_cc units are moles/(m2*s), where the m2 is m2 of
     # cell-membrane area. To convert to moles/s entering the cell, we multiply
@@ -287,8 +284,8 @@ def sim_slopes (t, cc_cells):
     # Next, do generation and decay.
     for ion_name,ion_index in sorted (ion_i.items(),key=operator.itemgetter(1)):
         gen = gen_cells[ion_index,:] * eval_magic(gen_magic[ion_index,:])
-        decay = cc_cells[ion_index,:] * decay_cells[ion_index]
-        slew_cc += gen - decay
+        decay = cc_cells[ion_index,:] * decay_rates[ion_index]
+        slew_cc[ion_index] += gen - decay
 
     global post_hook_func
     if (post_hook_func != None):
@@ -302,13 +299,16 @@ def sim_slopes (t, cc_cells):
 # surface area to get coulombs/m2, and finally divide by Farads/m2.
 # The final scaling factor is F * p.cell_vol / (p.cell_sa*p.cm),
 # or about 3200 mV per (mol/m3)
-def compute_Vm (cc_cells, p):
+def compute_Vm (Cc_cells, p):
+    global cc_cells
+    cc_cells = Cc_cells
+
     # Calculate Vmem from scratch via the charge in the cells.
     rho_cells = (cc_cells * z_array[:,np.newaxis]).sum(axis=0) * p.F
     return (rho_cells * p.cell_vol / (p.cell_sa*p.cm))
 
-def GHK (cc_cells, ion_index, Vm):
-    global cc_env, Dm_array, z_array, GP
+def GHK (ion_index, Vm):
+    global cc_env, Dm_array, z_array, GP, cc_cells
     num_cells = cc_cells.shape[1]
     f_ED = stb.electroflux(cc_env[ion_index] * np.ones(num_cells),
                            cc_cells[ion_index],
@@ -323,6 +323,9 @@ def GHK (cc_cells, ion_index, Vm):
     return (f_ED)
 
 def sim (end_time, p):
+    if (p.use_implicit):
+        return (sim_implicit (end_time, p))
+
     global cc_cells, Vm
     # Save snapshots of core variables for plotting.
     t_shots=[]; cc_shots=[]; last_shot=-100;
@@ -363,7 +366,7 @@ def sim (end_time, p):
         # Dump out status occasionally during the simulation.
         # Note that this may be irregular; numerical integration could, e.g.,
         # repeatedly do i += 7; so if sim_dump_interval=10 we would rarely dump!
-        if (i % p.sim_dump_interval == 0):
+        if ((i % p.sim_dump_interval == 0) and not p.no_dumps):
             long = (i % p.sim_long_dump_interval == 0)
             edb.dump (t, cc_cells, edb.Units.mV_per_s, long) # mol_per_m2s
             #edb.analyze_equiv_network (p)
@@ -390,6 +393,45 @@ def sim (end_time, p):
 
     return (t_shots, cc_shots)
 
+# Replacement for sim(); it uses scipy.integrate.solve_ivp()
+def sim_implicit (end_time, p):
+    import scipy
+    global cc_cells, Vm
+    num_ions, num_cells = cc_cells.shape
+
+    def wrap (t, y):
+        global cc_cells
+
+        print ('----------------\nt={:.9g}'.format(t))
+        slew_cc = sim_slopes (t, y.reshape(num_ions,num_cells)) # moles/(m3*s)
+        slew_cc = slew_cc.reshape (num_ions*num_cells)
+        np.set_printoptions (formatter={'float':'{:6.2f}'.format},linewidth=120)
+        print ('y={}'.format(y))
+        np.set_printoptions (formatter={'float':'{:7.2g}'.format},linewidth=120)
+        print ('slews={}'.format(slew_cc))
+        return (slew_cc)
+
+    # Save information for plotting at sample points. Early on (when things
+    # are changing quickly) save lots of info. Afterwards, save seldom so
+    # as to save memory. So, 100 points in t=[0,50], then 200 in [50, end_time].
+    boundary=min (50,end_time)
+    t_eval = np.linspace (0,boundary,50,endpoint=False)
+    if (end_time>50):
+        t_eval = np.append (t_eval, np.linspace (boundary, end_time, 200))
+
+    # run the simulation loop:
+    y0 = cc_cells.reshape (num_ions*num_cells)
+    bunch = scipy.integrate.solve_ivp (wrap, (0,end_time), y0, method='BDF', \
+                                       t_eval=t_eval)
+
+    print ('{} func evals, status={} ({}), success={}'.format \
+             (bunch.nfev, bunch.status, bunch.message, bunch.success))
+    t_shots = t_eval.tolist()
+    # bunch.y is [n_ions*n_cells, n_timepoints]
+    cc_shots = [y.reshape((num_ions,num_cells)) for y in bunch.y.T]
+    cc_cells = cc_shots[-1]
+    return (t_shots, cc_shots)
+
 # Builds and returns a Norton equivalent model for all GJs.
 # Specifically, two arrays GJ_Ith and GJ_Gth of [n_ions,n_GJ].
 # Ith[i,g] is the diffusive flux of ion #i in the direction of GJ[g].from->to,
@@ -397,6 +439,7 @@ def sim (end_time, p):
 # Gth*(Vto-Vfrom) is the drift flux of particles in the from->to direction;
 # Gth has units (mol/m2*s) per Volt.
 def GJ_norton (p):
+    global cc_cells
     n_GJ = gj_connects.size
     n_ions = cc_env.size
 
@@ -407,7 +450,7 @@ def GJ_norton (p):
     # of gj_len between connected cells.
     # First, compute d_conc/dx (assume constant conc in cells, and constant
     # gradients in the GJs).
-    GJ_from = gj_connects['from']	# Arrays of [n_GJ,1]
+    GJ_from = gj_connects['from']	# Arrays of [n_GJ]
     GJ_to   = gj_connects['to']
     D_scale = gj_connects['scale']
 
@@ -426,7 +469,7 @@ def GJ_norton (p):
         # Finally, electrodiffusive gj flux:
         # f_gj[i] is flux (moles/(m2*s)), in the direction from GJ input to
         # output. Note that D/kT gives the drift mobility.
-        D = GJ_diffusion[ion_index] * D_scale
+        D = GJ_diffusion[ion_index] * D_scale	# array[n_GJ], since D_scale is
         alpha = (c_avg * p.q * z_array[ion_index]) * (D/(p.kb*p.T*p.gj_len))
         GJ_Ith[ion_index,:] = -D*deltaC_GJ
         GJ_Gth[ion_index,:] = -alpha
@@ -437,7 +480,7 @@ def GJ_norton (p):
 # magic) or [N_GJs] (for GJ magic).
 # Returns a same-sized array of scalar scale factors in [0,1].
 def eval_magic (magic_arr):
-    global Vm
+    global Vm, cc_cells
 
     type = magic_arr['type']	# Magic_arr is a structured array; break it
     kM   = magic_arr['kM']	# into a separate simple array for each field.
@@ -451,26 +494,28 @@ def eval_magic (magic_arr):
     buf_ion  = np.flatnonzero (type==2) # Hill buffer with ions
     Hill_ion = np.flatnonzero (type>=2) # Hill inv or buf with ions
 
-    # Some advanced-indexing trickery for the use-ion-conc case (i.e., the
-    # channels whose input is a concentration and not Vm).
+    # Some advanced-indexing trickery for the Hill-model items (i.e., the
+    # magic_arr[] elements whose input is a concentration and not Vm).
+    # Create inps[] such that inps[i] is the ion concentration used by
+    # magic_arr[i]'s Hill model.
     # Say that cells #3 and #5 are using ion concentrations. Then, using the
     # ion[] and cell[] arrays just above,
-    #	cell #3 takes its input from ion number ion[3] (in cell number cell[3])
-    #	cell #5 takes its input from ion number ion[5] (in cell number cell[5])
+    #	magic_arr[3] takes its input from ion number ion[3] (in cell # cell[3])
+    #	magic_arr[5] takes its input from ion number ion[5] (in cell # cell[5])
     # and we must set inps[3] = cc_cells[ion[3],cell[3]]
     #		      inps[5] = cc_cells[ion[5],cell[5]]
     inps  = np.empty (magic_arr.size)	# Temporary array to build inputs
     inps[Hill_ion] = cc_cells[ion[Hill_ion], cell[Hill_ion]]
 
-    # if (ligand) -> MM (kM, N, cell, ion) and 1- if needed
-    # Implement the Hill buffer or inverter function (still for use-ion-conc).
+    # Implement a Hill-inverter function -- for those magic_arr items that are
+    # either Hill inverters or buffers! Then fix up the buffers by doing 1-x.
     scale = np.ones  (magic_arr.size)	# Final array to return to the caller
     scale[Hill_ion] = 1 / (1 + ((inps[Hill_ion]/kM[Hill_ion])**N[Hill_ion]))
     scale[buf_ion] = 1 - scale[buf_ion]
 
-    # And similar, but even trickier, for cells with channels that use Vmem
-    # The trick is the cell = -1 means that the cell gets Vm=0
-    # if (V) -> 1 / 1+exp(N*(v1-v2-kM))
+    # And similar, but even trickier, for items that use Vmem gating (type==1).
+    # Implement scale = 1 / 1+exp(N*(v1-v2-kM))
+    # Note: "cell = -1" means the cell gets Vm=0
     V1 = np.empty(magic_arr.size)
     V2 = np.empty(magic_arr.size)
     V1[use_Vmem] = Vm[cell [use_Vmem]]
