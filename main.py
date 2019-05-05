@@ -5,11 +5,17 @@ import sys
 
 
 
+
+
 def main():
     trait_file = open(sys.argv[1], "r")
     population = worm_gen.gen_worms(trait_file)
     sorted_pop = fit.population_fitness(population)
-    print_heap(sorted_pop, len(sorted_pop))
+    print(len(sorted_pop))
+    best_worms_pop = fit.purge_bad_worms(sorted_pop)
+    print(len(best_worms_pop))
+    #print_heap(best_worms_pop, len(best_worms_pop))
+    print(best_worms_pop)
     trait_file.close()
     return
 
