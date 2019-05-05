@@ -27,8 +27,8 @@ class Worm:
         self.G_cl = random.randint(trait_bounds[13], trait_bounds[14])
         self.GJ_diff_m = random.randint(trait_bounds[15], trait_bounds[16])
 
-def gen_worms(trait_file):
-    trait_bounds = get_traits(trait_file)
+def gen_worms():
+    trait_bounds = get_traits()
     trait_bounds = [int(i) for i in trait_bounds]
     num_worms = trait_bounds[0]
     random.seed()
@@ -44,15 +44,15 @@ def gen_worms(trait_file):
     
     return population
 
-def get_traits(trait_file):
+def get_traits():
     i = 1
     trait_bounds = []
     while (i <= (NUM_TRAITS * 2)):
-        line = trait_file.readline()
+        line = input("Enter traits:")
         if i % 2 == 0:
             seperate_traits = line.split()
             if((i > 2) and (int(seperate_traits[0]) > int(seperate_traits[1]))):
-                print("\nIncorrectly formatted input file.\nPlease keep original"+
+                print("\nIncorrectly formatted input.\nPlease keep original"+
                     " documetnation and ensure all lower bounds are less than"+
                     " higher bounds.\n")
                 exit(1)
