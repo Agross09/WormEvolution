@@ -1,7 +1,7 @@
 import heapq
 import math
 
-PROP_WORMS_FAIL = 0.75
+PROP_WORMS_FAIL = 0.50
 
 def population_fitness(population):
     pop_size = len(population)
