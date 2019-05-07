@@ -244,8 +244,8 @@ def setup_and_sim(worm, time_to_run):
     # P=sim.ion_i['P']; M=sim.ion_i['M']
     Vm_shots = [sim.compute_Vm (c,GP)*1000 for c in cc_shots]
     n_cells = sim.cc_cells.shape[1]
-    eplt.plot_Vmem_graph(t_shots,Vm_shots, np.arange(n_cells),'Vmem(mV)')
-    eplt.plot_Vmem_graph(t_shots,[s[Na] for s in cc_shots],np.arange(n_cells),'[Na] (mol/m3')
-    eplt.plot_Vmem_graph(t_shots,[s[K]  for s in cc_shots],np.arange(n_cells),'[K] (mol/m3')
-    eplt.plot_Vmem_graph(t_shots,[s[Cl]  for s in cc_shots],np.arange(n_cells),'[Cl] (mol/m3')
+    # eplt.plot_Vmem_graph(t_shots,Vm_shots, np.arange(n_cells),'Vmem(mV)')
+    # eplt.plot_Vmem_graph(t_shots,[s[Na] for s in cc_shots],np.arange(n_cells),'[Na] (mol/m3')
+    # eplt.plot_Vmem_graph(t_shots,[s[K]  for s in cc_shots],np.arange(n_cells),'[K] (mol/m3')
+    # eplt.plot_Vmem_graph(t_shots,[s[Cl]  for s in cc_shots],np.arange(n_cells),'[Cl] (mol/m3')
     #eplt.plot_Vmem_graph(t_shots,[s[M] for s in cc_shots],np.arange(n_cells),'[M] (mol/m3')
