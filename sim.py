@@ -1,6 +1,6 @@
 # Copyright 2018 Alexis Pietak and Joel Grodstein
 # See "LICENSE" for further details.
-
+from scipy import integrate
 '''
 Big picture: what does the network look like?
     The network is just a bunch of cells and GJs. However, there is no "class
@@ -405,7 +405,7 @@ def sim (end_time, p):
 
 # Replacement for sim(); it uses scipy.integrate.solve_ivp()
 def sim_implicit (end_time, p):
-    import scipy
+    
     global cc_cells, Vm
     num_ions, num_cells = cc_cells.shape
 
