@@ -1,25 +1,27 @@
 import worm_gen 
 import worm_fitness as fit
 import worm_breeding as breed
-from heapq import merge, heapify
+from heapq import merge, heapify, heappop
 import bitsey as bit
 import sys
 import test_wormAvgs as wormAvg
 
 # Notes: give worm boolean to see if tested with bitsey. DO NOT want to run worm through bitsey more than once.
 
-NUM_GENS = 10
+NUM_GENS = 20
 
 def main():
     trait_file = open(sys.argv[1], "r")
     population, trait_bounds = worm_gen.gen_worms(trait_file)
     i = 0
+    time = int(input("How long do you want the worms to run?"))
     while i < NUM_GENS:
         print("Gen {}".format(i))
-        bitsey(population)
+        bitsey(population,time)
         if i == 1:
-            print("Parents Avgs: ")
-            wormAvg.parents_avg(population)
+            print("Parents Grads: ")
+            #wormAvg.parents_avg(population)
+            wormResults(population)
             print("--------------")
         sorted_pop = fit.population_fitness(population)
         best_worms_pop = fit.purge_bad_worms(sorted_pop)
@@ -36,22 +38,40 @@ def main():
     wormAvg.average_Km(population)
     wormAvg.average_N(population)
     wormAvg.average_Gj_scale(population)
+   # heapify(population)
+    wormResults(population)
     trait_file.close()
     return
 
-def bitsey(population):
+def wormResults(pop):
+    population = pop.copy()
+    pop_size = len(population)
+    to_print = list()
+    i = 0
+    while i < pop_size:
+        worm = heappop(population)
+        to_print.append(worm)
+        i = i + 1
+    i = pop_size
+    while i > 0:
+        worm = to_print[i - 1]
+        print("Grad Stren: {}".format(worm[0]))
+        i = i - 1
+
+
+def bitsey(population,time):
     pop_size = len(population)
     i = 0
     popC = population.copy()
     if type(population) == set:
         while i < pop_size:
             worm_to_work = popC.pop()
-            bit.setup_and_sim(worm_to_work, 10)
+            bit.setup_and_sim(worm_to_work, time)
             i = i + 1
     if type(population) == list:
         while i < pop_size:
             worm_to_work = popC[i]
-            bit.setup_and_sim(worm_to_work[1], 10)
+            bit.setup_and_sim(worm_to_work[1], time)
             i = i + 1
 
 

@@ -351,13 +351,13 @@ def sim (end_time, p):
         if (p.adaptive_timestep):
             frac_cc = np.absolute(slew_cc)/(cc_cells+.00001)
             max_t_cc = p.sim_integ_max_delt_cc / (frac_cc.max())
-            print("+_+_+_+_+_+_TimesteP: {}".format(time_step))
+            #print("+_+_+_+_+_+_TimesteP: {}".format(time_step))
             min_test = min (max_t_Vm, max_t_cc)
-            print("--------Min: {}".format(min (max_t_Vm, max_t_cc)))
+            #print("--------Min: {}".format(min (max_t_Vm, max_t_cc)))
             min_test = min_test / time_step
-            print("----------Divided Min: {}".format(min_test))
+            #print("----------Divided Min: {}".format(min_test))
             if (math.isnan(min_test)):
-                print("NANANANANANANANANA___________________________________________")
+             #   print("NANANANANANANANANA___________________________________________")
                 min_test = 1
             else:
                 min_test = int(min_test)
@@ -378,7 +378,7 @@ def sim (end_time, p):
         # repeatedly do i += 7; so if sim_dump_interval=10 we would rarely dump!
         if ((i % p.sim_dump_interval == 0) and not p.no_dumps):
             long = (i % p.sim_long_dump_interval == 0)
-            edb.dump (t, cc_cells, edb.Units.mV_per_s, long) # mol_per_m2s
+            #edb.dump (t, cc_cells, edb.Units.mV_per_s, long) # mol_per_m2s
             #edb.analyze_equiv_network (p)
             #edb.dump_magic ()
 
@@ -386,9 +386,9 @@ def sim (end_time, p):
         t = i*time_step
 
         if (t>9000000):		# A hook to stop & debug during a sim.
-            edb.debug_print_GJ (p, cc_cells, 1)
+            #edb.debug_print_GJ (p, cc_cells, 1)
             import pdb; pdb.set_trace()
-            print (sim_slopes (2000, cc_cells))
+            #print (sim_slopes (2000, cc_cells))
 
         # Save information for plotting at sample points. Early on (when things
         # are changing quickly) save lots of info. Afterwards, save seldom so

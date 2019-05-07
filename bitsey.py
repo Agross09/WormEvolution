@@ -229,6 +229,19 @@ def setup_and_sim(worm, time_to_run):
     # pretty_plot() can make a nice picture of the interconnections and each
     # cell's Vm.
     Vm = sim.compute_Vm (sim.cc_cells, GP)
+    # print("Worm Fitness = " + str(worm.fitness))
+    # print("Km = " + str(worm.Km))
+    # print("N = " + str(worm.N))
+    # print("Gj_scale = " + str(worm.Gj_scale))
+    # print("num_cells = " + str(worm.num_cells))
+    # print("G_k = " + str(worm.G_k))
+    # print("G_k = " + str(worm.G_na))
+    # print("G_cl = " + str(worm.G_cl))
+    # print("Gj_diff_m = " + str(worm.Gj_diff_m))
+
+    #print("Vmem?: {}".format(Vm))
+    Vgrad = abs(Vm[0] - Vm[worm.num_cells -1])
+    worm.grad_stren = Vgrad
     #eplt.pretty_plot (Vm*1e3)
 
     # We often want a printed dump of the final simulation results.
