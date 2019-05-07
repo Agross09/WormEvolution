@@ -27,7 +27,7 @@ def population_fitness(population):
 def calculate_fitness(worm):
     #fitness function needs more complexity, but this is a start
     #GET RID OF 'i' DUMBO
-    fitness = worm.grad_stren + worm.length_of_stable - worm.time_to_stable
+    fitness = worm.grad_stren
     return fitness
 
 def purge_bad_worms(population):

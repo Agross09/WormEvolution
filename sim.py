@@ -1,6 +1,6 @@
 # Copyright 2018 Alexis Pietak and Joel Grodstein
 # See "LICENSE" for further details.
-
+from scipy import integrate
 '''
 Big picture: what does the network look like?
     The network is just a bunch of cells and GJs. However, there is no "class
@@ -325,7 +325,6 @@ def GHK (ion_index, Vm):
 def sim (end_time, p):
     if (p.use_implicit):
         return (sim_implicit (end_time, p))
-
     global cc_cells, Vm
     # Save snapshots of core variables for plotting.
     t_shots=[]; cc_shots=[]; last_shot=-100;
@@ -352,7 +351,18 @@ def sim (end_time, p):
         if (p.adaptive_timestep):
             frac_cc = np.absolute(slew_cc)/(cc_cells+.00001)
             max_t_cc = p.sim_integ_max_delt_cc / (frac_cc.max())
-            n_steps = max (1, int (min (max_t_Vm, max_t_cc) / time_step))
+            #print("+_+_+_+_+_+_TimesteP: {}".format(time_step))
+            min_test = min (max_t_Vm, max_t_cc)
+            #print("--------Min: {}".format(min (max_t_Vm, max_t_cc)))
+            min_test = min_test / time_step
+            #print("----------Divided Min: {}".format(min_test))
+            if (math.isnan(min_test)):
+             #   print("NANANANANANANANANA___________________________________________")
+                min_test = 1
+            else:
+                min_test = int(min_test)
+            max_test = max(1, min_test)
+            n_steps = int(max_test)
             #print ('At t={}: max_t_Vm={}, max_t_cc={} => {} steps'.format(t, max_t_Vm, max_t_cc, n_steps))
             #print ('steps_Vm=', (.001/(time_step*np.absolute (slew_Vm))).astype(int))
         else:
@@ -368,7 +378,7 @@ def sim (end_time, p):
         # repeatedly do i += 7; so if sim_dump_interval=10 we would rarely dump!
         if ((i % p.sim_dump_interval == 0) and not p.no_dumps):
             long = (i % p.sim_long_dump_interval == 0)
-            edb.dump (t, cc_cells, edb.Units.mV_per_s, long) # mol_per_m2s
+            #edb.dump (t, cc_cells, edb.Units.mV_per_s, long) # mol_per_m2s
             #edb.analyze_equiv_network (p)
             #edb.dump_magic ()
 
@@ -376,9 +386,9 @@ def sim (end_time, p):
         t = i*time_step
 
         if (t>9000000):		# A hook to stop & debug during a sim.
-            edb.debug_print_GJ (p, cc_cells, 1)
+            #edb.debug_print_GJ (p, cc_cells, 1)
             import pdb; pdb.set_trace()
-            print (sim_slopes (2000, cc_cells))
+            #print (sim_slopes (2000, cc_cells))
 
         # Save information for plotting at sample points. Early on (when things
         # are changing quickly) save lots of info. Afterwards, save seldom so
@@ -395,20 +405,20 @@ def sim (end_time, p):
 
 # Replacement for sim(); it uses scipy.integrate.solve_ivp()
 def sim_implicit (end_time, p):
-    import scipy
+    
     global cc_cells, Vm
     num_ions, num_cells = cc_cells.shape
 
     def wrap (t, y):
         global cc_cells
 
-        print ('----------------\nt={:.9g}'.format(t))
+        #print ('----------------\nt={:.9g}'.format(t))
         slew_cc = sim_slopes (t, y.reshape(num_ions,num_cells)) # moles/(m3*s)
         slew_cc = slew_cc.reshape (num_ions*num_cells)
         np.set_printoptions (formatter={'float':'{:6.2f}'.format},linewidth=120)
-        print ('y={}'.format(y))
+        #print ('y={}'.format(y))
         np.set_printoptions (formatter={'float':'{:7.2g}'.format},linewidth=120)
-        print ('slews={}'.format(slew_cc))
+        #print ('slews={}'.format(slew_cc))
         return (slew_cc)
 
     # Save information for plotting at sample points. Early on (when things
@@ -424,8 +434,8 @@ def sim_implicit (end_time, p):
     bunch = scipy.integrate.solve_ivp (wrap, (0,end_time), y0, method='BDF', \
                                        t_eval=t_eval)
 
-    print ('{} func evals, status={} ({}), success={}'.format \
-             (bunch.nfev, bunch.status, bunch.message, bunch.success))
+    #print ('{} func evals, status={} ({}), success={}'.format \
+             #(bunch.nfev, bunch.status, bunch.message, bunch.success))
     t_shots = t_eval.tolist()
     # bunch.y is [n_ions*n_cells, n_timepoints]
     cc_shots = [y.reshape((num_ions,num_cells)) for y in bunch.y.T]
