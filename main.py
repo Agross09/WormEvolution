@@ -8,33 +8,33 @@ import test_wormAvgs as wormAvg
 
 # Notes: give worm boolean to see if tested with bitsey. DO NOT want to run worm through bitsey more than once.
 
-NUM_GENS = 10000
+NUM_GENS = 2
 
 def main():
     trait_file = open(sys.argv[1], "r")
     population, trait_bounds = worm_gen.gen_worms(trait_file)
     i = 0
-    #while i < NUM_GENS:
-    bitsey(population)
-    if i == 1:
-        print("Parents Avgs: ")
-        wormAvg.parents_avg(population)
-        print("--------------")
-    sorted_pop = fit.population_fitness(population)
-    # best_worms_pop = fit.purge_bad_worms(sorted_pop)
-    # child_list = breed.breed_worms(best_worms_pop, trait_bounds)
-    # # an unordered list of new worms without fitness levels - not BITSEYed yet.
-    #                    # Doubles population
-    # # Make heap of child worms with fitness levels gotten through BITSEY:
-    # child_pop = fit.population_fitness(child_list)
-    # # Pass child_pop and the best_worms_pop into a function that merges them into a single heap:
-    # population = mergeHeaps(best_worms_pop, child_pop)
+    while i < NUM_GENS:
+        bitsey(population)
+        if i == 1:
+            print("Parents Avgs: ")
+            wormAvg.parents_avg(population)
+            print("--------------")
+        sorted_pop = fit.population_fitness(population)
+        best_worms_pop = fit.purge_bad_worms(sorted_pop)
+        child_list = breed.breed_worms(best_worms_pop, trait_bounds)
+        # an unordered list of new worms without fitness levels - not BITSEYed yet.
+                           # Doubles population
+        # Make heap of child worms with fitness levels gotten through BITSEY:
+        child_pop = fit.population_fitness(child_list)
+        # Pass child_pop and the best_worms_pop into a function that merges them into a single heap:
+        population = mergeHeaps(best_worms_pop, child_pop)
 
 
-    # #i = i + 1
-    wormAvg.average_Km(sorted_pop)
-    wormAvg.average_N(sorted_pop)
-    wormAvg.average_Gj_scale(sorted_pop)
+        i = i + 1
+    wormAvg.average_Km(population)
+    wormAvg.average_N(population)
+    wormAvg.average_Gj_scale(population)
     trait_file.close()
     return
 
@@ -49,8 +49,8 @@ def bitsey(population):
             i = i + 1
     if type(population) == list:
         while i < pop_size:
-            worm_to_work = popCn[i]
-            bit.setup_and_sim(worm_to_work, 10)
+            worm_to_work = popC[i]
+            bit.setup_and_sim(worm_to_work[1], 10)
             i = i + 1
 
 
