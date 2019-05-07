@@ -1,11 +1,11 @@
 Number of Worms
 8
 Minimum / Maximum Bounds for Km
-1 1
+1 40
 Minimum / Maximum Bounds for N
-10 10
+1 100
 Minimum / Maximum Bounds for GJ_scale
-0 1
+1 100
 Minimum / Maximum Bounds for num_cells
 5 5
 Minimum / Maximum Bounds for G_k

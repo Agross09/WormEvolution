@@ -351,7 +351,18 @@ def sim (end_time, p):
         if (p.adaptive_timestep):
             frac_cc = np.absolute(slew_cc)/(cc_cells+.00001)
             max_t_cc = p.sim_integ_max_delt_cc / (frac_cc.max())
-            n_steps = max (1, int (min (max_t_Vm, max_t_cc) / time_step))
+            print("+_+_+_+_+_+_TimesteP: {}".format(time_step))
+            min_test = min (max_t_Vm, max_t_cc)
+            print("--------Min: {}".format(min (max_t_Vm, max_t_cc)))
+            min_test = min_test / time_step
+            print("----------Divided Min: {}".format(min_test))
+            if (math.isnan(min_test)):
+                print("NANANANANANANANANA___________________________________________")
+                min_test = 1
+            else:
+                min_test = int(min_test)
+            max_test = max(1, min_test)
+            n_steps = int(max_test)
             #print ('At t={}: max_t_Vm={}, max_t_cc={} => {} steps'.format(t, max_t_Vm, max_t_cc, n_steps))
             #print ('steps_Vm=', (.001/(time_step*np.absolute (slew_Vm))).astype(int))
         else:

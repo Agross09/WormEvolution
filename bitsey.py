@@ -10,7 +10,7 @@ import sim as sim
 import eplot as eplt
 import edebug as edb
 import re
-
+from math import isnan
 #####################################################
 # For an overview of the network data structures, see sim.py
 
@@ -119,7 +119,7 @@ def setup_lab_QSS_weighted_sum(p):
 # - We can switch it between having ion channels in the head/tail only, or in
 #   the entire body.
 def setup_lab_worm(params, worm):
-    #params.use_implicit = True
+    params.use_implicit = True
     # Parameters:
     # N and kM are for the Hill model, where [M] controls the K channels.
     # 'scale' controls how strong the gap junctions are
