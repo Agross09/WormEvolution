@@ -325,7 +325,6 @@ def GHK (ion_index, Vm):
 def sim (end_time, p):
     if (p.use_implicit):
         return (sim_implicit (end_time, p))
-
     global cc_cells, Vm
     # Save snapshots of core variables for plotting.
     t_shots=[]; cc_shots=[]; last_shot=-100;
