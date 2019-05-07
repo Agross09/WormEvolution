@@ -2,9 +2,13 @@ import worm_gen as worm
 import heapq
 import random
 
+#Number of Kids per worm
 NUM_KIDS = 2
-NUM_TRAITS = 8
+
+#Chance to mutate a trait (1 / denom)
 DENOM_CHANCE_TO_MUTATE = 4
+
+#Worm Attribute Constants Do not affect data, just for readability)
 KM = 1
 N = 2
 GJ_SCALE = 3
@@ -13,6 +17,7 @@ G_K = 5
 G_NA = 6
 G_CL = 7
 GJ_DIFF_M = 8
+NUM_TRAITS = 8
 
 def breed_worms(population, trait_bounds):
     num_worms = len(population)
