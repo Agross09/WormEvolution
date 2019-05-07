@@ -7,3 +7,16 @@ Each pair of worms produces two children with a mixture of their parents' traits
 
 The goal of this project is to offer researchers a tool with which they can test to see which parameters produce the highest
 fitness levels among a population of worms.
+
+
+In Depth Explanation:
+  Files:
+     main.py -
+        Opens file. 
+     worm_fitness.py
+     worm_breeding.py
+     test_wormAvgs.py
+     worm_input.txt
+     worm_gen.py
+     bitsey.py
+     sim.py
