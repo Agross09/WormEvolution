@@ -182,10 +182,10 @@ def setup_lab_worm(params, worm):
 
     #Na/K-ATPase pump with a maximum rate of 1.0x10-7 mol/(m^2 s)
 
-    print ('Head D_K={}, tail D_K={}, scale={}'.format(sim.Dm_array[K,0],
-                                                      sim.Dm_array[K,-1],scale))
-    print ('Head magic={}'.format (sim.ion_magic[K,0]))
-    print ('Tail magic={}'.format (sim.ion_magic[K,-1]))
+    #print ('Head D_K={}, tail D_K={}, scale={}'.format(sim.Dm_array[K,0],
+                                                      #sim.Dm_array[K,-1],scale))
+    ##print ('Head magic={}'.format (sim.ion_magic[K,0]))
+    #print ('Tail magic={}'.format (sim.ion_magic[K,-1]))
 
 def setup_and_sim(worm, time_to_run):
     import sys
@@ -216,11 +216,11 @@ def setup_and_sim(worm, time_to_run):
     Vm = sim.compute_Vm (sim.cc_cells, GP)
     assert (Vm<.5).all()    # I.e.,roughly charge neutral
     np.set_printoptions (formatter={'float': '{: 6.3g}'.format}, linewidth=90)
-    print ('Initial Vm   ={}mV\n'.format(1000*Vm))
+    #print ('Initial Vm   ={}mV\n'.format(1000*Vm))
 
-    print ('Starting main simulation loop')
+    #print ('Starting main simulation loop')
     t_shots, cc_shots = sim.sim (end_time, GP)
-    print ('Simulation is finished.')
+    #print ('Simulation is finished.')
 
     # Now, the simulation is over. Do any end-of-sim analysis.
     #edb.analyze_equiv_network (GP)
@@ -233,7 +233,7 @@ def setup_and_sim(worm, time_to_run):
 
     # We often want a printed dump of the final simulation results.
     np.set_printoptions (formatter={'float': '{:.6g}'.format}, linewidth=90)
-    edb.dump (end_time, sim.cc_cells, edb.Units.mV_per_s, True)
+    #edb.dump (end_time, sim.cc_cells, edb.Units.mV_per_s, True)
     #edb.dump (end_time, sim.cc_cells, edb.Units.mol_per_m2s, True)
 
     # We often want graphs of various quantities vs. time.

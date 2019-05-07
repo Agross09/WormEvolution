@@ -412,13 +412,13 @@ def sim_implicit (end_time, p):
     def wrap (t, y):
         global cc_cells
 
-        print ('----------------\nt={:.9g}'.format(t))
+        #print ('----------------\nt={:.9g}'.format(t))
         slew_cc = sim_slopes (t, y.reshape(num_ions,num_cells)) # moles/(m3*s)
         slew_cc = slew_cc.reshape (num_ions*num_cells)
         np.set_printoptions (formatter={'float':'{:6.2f}'.format},linewidth=120)
-        print ('y={}'.format(y))
+        #print ('y={}'.format(y))
         np.set_printoptions (formatter={'float':'{:7.2g}'.format},linewidth=120)
-        print ('slews={}'.format(slew_cc))
+        #print ('slews={}'.format(slew_cc))
         return (slew_cc)
 
     # Save information for plotting at sample points. Early on (when things
@@ -434,8 +434,8 @@ def sim_implicit (end_time, p):
     bunch = scipy.integrate.solve_ivp (wrap, (0,end_time), y0, method='BDF', \
                                        t_eval=t_eval)
 
-    print ('{} func evals, status={} ({}), success={}'.format \
-             (bunch.nfev, bunch.status, bunch.message, bunch.success))
+    #print ('{} func evals, status={} ({}), success={}'.format \
+             #(bunch.nfev, bunch.status, bunch.message, bunch.success))
     t_shots = t_eval.tolist()
     # bunch.y is [n_ions*n_cells, n_timepoints]
     cc_shots = [y.reshape((num_ions,num_cells)) for y in bunch.y.T]

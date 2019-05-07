@@ -8,13 +8,14 @@ import test_wormAvgs as wormAvg
 
 # Notes: give worm boolean to see if tested with bitsey. DO NOT want to run worm through bitsey more than once.
 
-NUM_GENS = 2
+NUM_GENS = 10
 
 def main():
     trait_file = open(sys.argv[1], "r")
     population, trait_bounds = worm_gen.gen_worms(trait_file)
     i = 0
     while i < NUM_GENS:
+        print("Gen {}".format(i))
         bitsey(population)
         if i == 1:
             print("Parents Avgs: ")
