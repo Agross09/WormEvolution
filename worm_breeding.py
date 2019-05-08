@@ -33,7 +33,8 @@ def breed_worms(population, trait_bounds):
         while num_kids > 0:
             num_kids = num_kids - 1
             worm_baby = make_baby(worm1, worm2, trait_bounds)
-            worm_children_pop.append(worm_baby)
+            worm_baby_tup = (0,worm_baby)
+            worm_children_pop.append(worm_baby_tup)
         num_kids = NUM_KIDS  
         i = i - 1
     return worm_children_pop

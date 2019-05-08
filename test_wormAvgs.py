@@ -6,7 +6,9 @@ def parents_avg(population):
 
 def average_Km(end_of_round_pop):
     worm_number = len(end_of_round_pop)
+    print("Worm Number: {}".format(worm_number))
     denominator = len(end_of_round_pop)
+    print("Denominator: {}".format(denominator))
     total = 0
     while worm_number > 0:
         total = end_of_round_pop[worm_number - 1][1].Km + total
