@@ -6,7 +6,7 @@ import random
 NUM_KIDS = 2
 
 #Chance to mutate a trait (1 / denom)
-DENOM_CHANCE_TO_MUTATE = 4
+DENOM_CHANCE_TO_MUTATE = 2
 
 #Worm Attribute Constants Do not affect data, just for readability)
 KM = 1
@@ -31,18 +31,19 @@ def breed_worms(population, trait_bounds):
         worm1 = worm1_with_fitness[1]
         worm2 = worm2_with_fitness[1]
         while num_kids > 0:
+            worm_baby = worm.Worm(trait_bounds)
             num_kids = num_kids - 1
-            worm_baby = make_baby(worm1, worm2, trait_bounds)
+            worm_baby = make_baby(worm1, worm2, worm_baby)
             worm_children_pop.append(worm_baby)
         num_kids = NUM_KIDS  
         i = i - 1
     return worm_children_pop
 
 
-def make_baby(worm1, worm2, trait_bounds):
+def make_baby(worm1, worm2, worm_baby):
     i = NUM_TRAITS
     from_worm1 = True
-    worm_baby = worm.Worm(trait_bounds)
+    
     
     # For each trait, we randomly choose from which parent we get the attribute.
     while i > 0:

@@ -5,17 +5,20 @@ PROP_WORMS_FAIL = 0.50
 
 def population_fitness(population):
     pop_size = len(population)
+    #print("POP SIZE: {}".format(pop_size))
     pop_heap = []
     i = 0
     #populationC = population.copy()
 
     #heapq.heappush(pop_heap, (worm.fitness, worm))
     while i < pop_size:
+        #print("Iteratoion: {}".format(i))
         worm = population.pop()
         if (type(worm) != tuple):
             worm.fitness = calculate_fitness(worm)
             pop_heap.append((worm.fitness, worm))
         if(type(worm) == tuple):
+            #print("Add worm: {}".format(worm))
             worm[1].fitness = calculate_fitness(worm[1])
             pop_heap.append(worm)
         i = i + 1
@@ -27,6 +30,7 @@ def population_fitness(population):
 def calculate_fitness(worm):
     #fitness function needs more complexity, but this is a start
     #GET RID OF 'i' DUMBO
+    #print("fitness: {}".format(worm.grad_stren))
     fitness = worm.grad_stren
     return fitness
 

@@ -241,7 +241,9 @@ def setup_and_sim(worm, time_to_run):
 
     #print("Vmem?: {}".format(Vm))
     Vgrad = abs(Vm[0] - Vm[worm.num_cells -1])
+    #print("VGRAD TO ADD: {}".format(Vgrad))
     worm.grad_stren = Vgrad
+    worm.fitness = Vgrad
     #eplt.pretty_plot (Vm*1e3)
 
     # We often want a printed dump of the final simulation results.
@@ -262,3 +264,4 @@ def setup_and_sim(worm, time_to_run):
     # eplt.plot_Vmem_graph(t_shots,[s[K]  for s in cc_shots],np.arange(n_cells),'[K] (mol/m3')
     # eplt.plot_Vmem_graph(t_shots,[s[Cl]  for s in cc_shots],np.arange(n_cells),'[Cl] (mol/m3')
     #eplt.plot_Vmem_graph(t_shots,[s[M] for s in cc_shots],np.arange(n_cells),'[M] (mol/m3')
+    return worm

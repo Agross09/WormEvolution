@@ -5,9 +5,9 @@ Minimum / Maximum Bounds for Km
 Minimum / Maximum Bounds for N
 1 40
 Minimum / Maximum Bounds for GJ_scale
-1 40
+1 100
 Minimum / Maximum Bounds for num_cells
-1 25
+2 22
 Minimum / Maximum Bounds for G_k
 14 16
 Minimum / Maximum Bounds for G_na

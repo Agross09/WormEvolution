@@ -26,9 +26,9 @@ class Worm:
         self.G_na = random.randint(trait_bounds[11], trait_bounds[12])
         self.G_cl = random.randint(trait_bounds[13], trait_bounds[14])
         self.Gj_diff_m = random.randint(trait_bounds[15], trait_bounds[16])
-        self.time_to_stable = self.Km
-        self.length_of_stable = self.N
-        self.grad_stren = self.Gj_scale
+        self.time_to_stable = 0
+        self.length_of_stable = 0
+        self.grad_stren = 0
         self.fitness = 0
 
     def __lt__(self, other):
