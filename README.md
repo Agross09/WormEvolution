@@ -1,10 +1,12 @@
 # WormEvolution
 Evolutionary Algorithm for simulating Planaria using BITSEY.
 
-Give the simulation a set of input parameters and the simulation will calculate the fitness of for each worm using BITSEY (Cell matrix voltage simulator).
+Files developed for this project: main.py, bitsey.py, test_wormAvgs.py, worm_breeding.py, worm_fitness.py, worm_gen.py, worm_input.txt.
 
-The simulation then takes the best 50% of the population and doubles the population by breeding pairs of worms.
-Each pair of worms produces two children with a mixture of their parents' traits and some traits that have undergone mutation.
+Bitsey (a simulation developed by Alexis Pietak and Joel Grodstein) is given a set of parametrs and calculates the fitness of each worm using BITSEY (Cell matrix voltage simulator).
+
+Our algorithm takes the fittest 50% of the population and doubles this most-fit set by "breeding" them in pairs.
+Each pair of worms produces two children with a mixture of their parents' traits original traits as well as randomly selected "mutated" traits. 
 
 The goal of this project is to offer researchers a tool with which they can test to see which parameters produce the highest
 fitness levels among a population of worms.
